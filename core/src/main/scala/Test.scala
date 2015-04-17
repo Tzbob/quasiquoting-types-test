@@ -1,3 +1,5 @@
 object Test extends App {
-  Macros.hello
+  val x = new Object {}
+  Macros.hello(x)
 }
+
