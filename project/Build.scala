@@ -28,6 +28,7 @@ object MyBuild extends Build {
     file("macros"),
     settings = buildSettings ++ Seq(
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
+      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
       libraryDependencies := {
         CrossVersion.partialVersion(scalaVersion.value) match {
           // if Scala 2.11+ is used, quasiquotes are available in the standard distribution
