@@ -1,5 +1,6 @@
 package test
 
+import scala.annotation.tailrec
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 
@@ -26,7 +27,7 @@ object Macros {
       {
         final class $name extends _root_.test.Witness {
           type T = $sTpe
-          val value: $sTpe = $s
+          val value: $sTpe = $s.asInstanceOf[$sTpe]
         }
         new $name
       }
@@ -48,12 +49,42 @@ object Macros {
 
     val tree = t.tree
 
+    def ownerChain(sym: Symbol): List[Symbol] = {
+      @tailrec
+      def loop(sym: Symbol, acc: List[Symbol]): List[Symbol] =
+        if(sym.owner == NoSymbol) acc
+        else loop(sym.owner, sym :: acc)
+
+      loop(sym, Nil)
+    }
+
+    val sym = tree.symbol
+
+    def mkDependentRef(prefix: Type, path: List[Name]): (Type, Symbol) = {
+      val (_, pre, sym) =
+        path.foldLeft((prefix, NoType, NoSymbol)) {
+          case ((pre, _, sym), nme) =>
+            val sym0 = pre.member(nme)
+            val pre0 = sym0.typeSignature
+            (pre0, pre, sym0)
+        }
+      (pre, sym)
+    }
+
+    val suffix = ownerChain(sym)
+    val path = suffix.tail.map(_.name.toTermName)
+    val (modulePre, moduleSym) = mkDependentRef(suffix.head.typeSignature, path)
+
+    println(showRaw(modulePre))
+    println(showRaw(moduleSym))
+
     val pref = prefix(tree.tpe)
-    val ref = mkAttributedRef(pref, tree.symbol)
-    val st = singleType(pref, tree.symbol)
+    val ref = mkAttributedRef(modulePre, moduleSym)
+    val st = singleType(modulePre, moduleSym)
     val body = mkWitness(st, ref)
 
     println(body)
+    println(showRaw(body))
     body
   }
 }
